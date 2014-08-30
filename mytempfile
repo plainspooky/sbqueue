@@ -1,0 +1,7 @@
+#!/bin/sh
+
+	TMP1=`cat /dev/urandom | tr -cd 'a-f0-9' | head -c 6`
+
+	echo "/tmp/file${TMP1}"
+
+	exit 0

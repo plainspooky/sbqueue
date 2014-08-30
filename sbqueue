@@ -1,0 +1,311 @@
+#!/bin/sh
+#
+#  SBQueue
+#  Stupid Batch Queue version 1.0
+#  My simple and ordinary task enqueuer
+#
+#  Copyright 2014, Giovanni Nunes <giovanni.nunes@gmail.com>
+#
+#  This program is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation; either version 2 of the License, or
+#  (at your option) any later version.
+#  
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#  
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software
+#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+#  MA 02110-1301, USA.
+#
+
+if [ -r ~/.sbqueuerc ]
+then
+	. ~/.sbqueuerc
+	. $SBQDIR/sbqueue.conf
+else
+	echo "You need to set SBQDIR variable on .sbqueuerc file!"
+	exit 1
+fi
+
+#
+# sbqLOGGING -- To write a logs like a boss :)
+#
+sbqLOGGING()
+{
+	echo `date +"%Y-%m-%d %X"`" $*" >> $SBQLOG
+}
+
+#
+# sbqENQUEUE -- Gets my tasks from STDIN
+#
+sbqENQUEUE()
+{
+	TEMPFILE=`tempfile 2>/dev/null || $SBQDIR/mytempfile`
+	PWD=`pwd`
+	
+	# ID is in Hexa
+	ID0=`date +%s`
+	ID1=`date +%0N | cut -c 1-2`
+	ID=`printf "%x.%u" $ID0 $ID1`
+	
+	cat > $TEMPFILE
+	
+	I=`cat $TEMPFILE | wc -m | cut --delimiter=' ' --fields=1`
+	
+	if [ $I -gt 0 ]
+	then
+		OLDPWD=`pwd`
+		
+		# prepare task
+		echo "#!/bin/sh" >$SBQTSK/task-$ID
+		echo "# task $ID submited by `whoami`"  >>$SBQTSK/task-$ID
+		echo "cd $PWD\n" >>$SBQTSK/task-$ID
+		cat $TEMPFILE >>$SBQTSK/task-$ID
+		echo "\nexit 0" >>$SBQTSK/task-$ID
+		
+		sbqLOGGING "Task $ID scheduled"
+		echo "task scheduled as $ID"
+		rm -f $TEMPFILE > /dev/null
+	else
+		echo "nothing to schedule"
+		exit 1
+	fi
+}
+
+#
+# sbqHELP -- Displays a help message
+#
+sbqHELP()
+{
+	echo "\
+$MENSA
+
+- Daemon managing
+  $CMDSTRT : Starts SBQ daemon
+  $CMDSTOP : Stops SBQ daemon
+
+- Queue control
+  $CMDSTAT : Show status
+  $CMDHOLD : Hold queue (nothing will be processed)
+  $CMDRELE : Releases queue
+
+- Task 
+  $CMDENQE : Enqueues a new task (use <CTRL>+<D> when finished)
+  $CMDLIST : Lists all queued tasks
+  $CMDREMO : Removes a queued task
+  $CMDVIEW : Views the content of a queued task.
+"
+
+}
+
+#
+# sbqHOLD -- Holds my task scheduling
+#
+sbqHOLD()
+{
+	if [ `cat $SBQSTA`="RELEASED" ]
+	then	
+		echo "HOLD" | tee $SBQSTA
+		sbqLOGGING "Holding queue"
+	fi
+}
+
+#
+# sbqLIST -- Lists tasks scheduled
+#
+sbqLIST()
+{
+	I=0
+	
+	for LIST in `ls $SBQDIR/tasks/`
+	do
+		I=$((I+1))
+		TASK=`echo $LIST | sed 's/task-//g'`
+		echo "$I\t$TASK"
+
+	done
+	
+	if [ $I -gt 0 ]
+	then
+		echo "total of $I task(s) in queue"
+	else
+		echo "no tasks on queue"
+	fi
+}
+
+#
+# sbqRELEASE -- Releases my task scheduling
+#
+sbqRELEASE()
+{
+	if [ `cat $SBQSTA`="HOLD" ]
+	then
+		echo "RELEASED" | tee $SBQSTA
+		sbqLOGGING "Releasing queue"
+	fi
+}
+
+#
+# sbqREMOVE -- Removes a scheduled task
+#
+sbqREMOVE()
+{
+	ID=$1
+
+	if [ -z $ID ]
+	then
+		echo "Please include the task ID"
+		exit 2
+	else
+		if [ -f $SBQTSK/task-$ID ]
+		then
+			rm -f $SBQTSK/task-$ID
+			sbqLOGGING "Task $ID removed from queue"
+			echo "Task $ID removed from queue"
+		else
+			echo "Task $ID not found"
+			exit 1
+		fi
+	fi
+}
+
+#
+# sbqSTART() -- starts my fake-daemon
+#
+sbqSTART()
+{
+	if [ -f $SBQPID ]
+	then
+		echo "SBQ already running!"
+	else
+		nohup $SBQBIN/sbqd >$SBQRUN 2>/dev/null &
+	fi
+}
+
+#
+# sbqSTOP -- stops my fake-daemon
+#
+sbqSTOP()
+{
+	if [ -f $SBQPID ]
+	then
+		MYPID=`cat $SBQPID`
+		
+		kill -9 $MYPID 2>/dev/null
+		if [ $? ]
+		then
+			rm $SBQPID
+			sbqLOGGING "Stoping daemon"
+		else
+			echo "Can't stop daemon at PID $MYPID!"
+		fi
+	else
+		echo "SBQ not running!"
+	fi
+}
+
+#
+# sbqSTATUS -- show status of the queuer
+#
+sbqSTATUS()
+{
+	cat $SBQSTA
+}
+
+#
+# sbqVIEW -- view contents of a scheduled task
+#
+sbqVIEW()
+{
+	ID=$1
+
+	if [ -z $ID ]
+	then
+		echo "Insert a task ID!"
+	else
+		if [ -f $SBQTSK/task-$ID ]
+		then
+			cat $SBQTSK/task-$ID
+		else
+			echo "Task $ID not found!"
+		fi
+	fi
+}
+
+# --------------------------------------------------------------
+
+VERSION=1.0
+
+MENSA="SBQueue - Stupid Batch Queue version $VERSION\nCopyright (C) 2014 Giovanni Nunes"
+
+COMMAN=`basename $0`
+
+if [ -z $SBQDIR ]
+then
+	echo "SBQDIR not defined!"
+	exit 2
+else
+	
+	if [ ! -r $SBQSTA ]
+	then
+		echo "HOLD" > $SBQSTA
+	fi
+	
+	case "$COMMAN" in
+		$CMDSTRT)
+		sbqSTART
+		;;
+		
+		$CMDSTOP)
+		sbqSTOP
+		;;
+		
+		$CMDENQE)
+		sbqENQUEUE
+		;;
+		
+		$CMDHOLD)
+		sbqHOLD
+		;;
+		
+		$CMDLIST)
+		sbqLIST
+		;;
+		
+		$CMDSTAT)
+		sbqSTATUS
+		;;
+		
+		$CMDRELE)
+		sbqRELEASE
+		;;
+		
+		$CMDREMO)
+		sbqREMOVE $1
+		;;
+		
+		$CMDVIEW)
+		sbqVIEW $1
+		;;
+		
+		$CMDHELP)
+		sbqHELP
+		;;
+	*)
+		cat \
+<<EOT
+$MENSA
+
+This program comes with ABSOLUTELY NO WARRANTY. This is free software, and you are welcome to redistribute it under certain conditions.
+
+Type 'sbqhelp' to get a list of commands.
+EOT
+		exit 1
+	esac
+fi
+
+exit 0
