@@ -33,8 +33,8 @@ done
 for I in	mytempfile sbqueue sbqd
 do
 	echo "<2> Copying '${I}'"
-	cp ${SBQUEUE_SRC}/$I ${SBQUEUE_DIR}
-	chmod 755 ${SBQUEUE_DIR}/${I}
+	cp "${SBQUEUE_SRC}/$I" "${SBQUEUE_DIR}"
+	chmod 755 "${SBQUEUE_DIR}/${I}"
 done
 
 # CREATE DIRECTORIES
@@ -43,7 +43,7 @@ cd ${SBQUEUE_DIR}
 for I in	error output run tasks
 do
 	echo "<3> Create './${I}'"
-	mkdir $I
+	mkdir "$I"
 done
 
 cd ${SBQUEUE_BIN}
@@ -54,12 +54,12 @@ for I in	${CMDENQE} ${CMDHELP} ${CMDHOLD} ${CMDLIST} \
 			${CMDSTOP} ${CMDVIEW}
 do
 	echo "<4> Creating symlink to '${I}'"
-	ln -s ${SBQUEUE_DIR}/sbqueue ${I}
+	ln -s "${SBQUEUE_DIR}/sbqueue" "${I}"
 done
 
 # CREATE RC FILE
 echo "<5> Creating .sbqueuerc file"
-echo "SBQDIR='${SBQUEUE_DIR}'" > ${HOME}/.sbqueuerc
+echo "SBQDIR='${SBQUEUE_DIR}'" > "${HOME}/.sbqueuerc"
 
 # SAVE CONFIGURATION
 echo "<6> Saving SBQueue configuration"
@@ -73,13 +73,13 @@ SBQBIN=${SBQUEUE_BIN}
 SBQWAIT=5
 
 # my internal variables
-SBQERR=${SBQUEUE_DIR}/error
-SBQLOG=${SBQUEUE_DIR}/sbqueue.log
-SBQOUT=${SBQUEUE_DIR}/output
-SBQPID=${SBQUEUE_DIR}/sbqd.pid
+SBQERR=\"${SBQUEUE_DIR}/error\"
+SBQLOG=\"${SBQUEUE_DIR}/sbqueue.log\"
+SBQOUT=\"${SBQUEUE_DIR}/output\"
+SBQPID=\"${SBQUEUE_DIR}/sbqd.pid\"
 SBQRUN=/dev/null
-SBQSTA=${SBQUEUE_DIR}/sbqueue.status
-SBQTSK=${SBQUEUE_DIR}/tasks
+SBQSTA=\"${SBQUEUE_DIR}/sbqueue.status\"
+SBQTSK=\"${SBQUEUE_DIR}/tasks\"
 
 # the sbqueue commands
 CMDENQE='$CMDENQE'
@@ -91,7 +91,7 @@ CMDREMO='$CMDREMO'
 CMDSTAT='$CMDSTAT'
 CMDSTRT='$CMDSTRT'
 CMDSTOP='$CMDSTOP'
-CMDVIEW='$CMDVIEW'" > ${SBQUEUE_DIR}/sbqueue.conf
+CMDVIEW='$CMDVIEW'" > "${SBQUEUE_DIR}/sbqueue.conf"
 echo "Done..."
 
 exit 0
