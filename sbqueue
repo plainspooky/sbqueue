@@ -182,7 +182,7 @@ sbqSTART()
 	then
 		echo "SBQ already running!"
 	else
-		nohup $SBQBIN/sbqd >$SBQRUN 2>/dev/null &
+		nohup $SBQDIR/sbqd >$SBQRUN 2>/dev/null &
 	fi
 }
 
