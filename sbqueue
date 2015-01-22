@@ -32,7 +32,7 @@ else
 fi
 
 #
-# Fix a curious behavior with echo and older versions
+# Fixes a curious behavior with echo and older versions
 #
 ECHO='/bin/echo -e '
 
