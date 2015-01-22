@@ -29,6 +29,11 @@ else
 	exit 1
 fi
 
+#
+# Fixing a curious behavior with echo and older versions
+#
+ECHO='/bin/echo -e '
+
 OLDPWD=`pwd`
 MYPID=$$
 
